@@ -369,7 +369,7 @@ let set_blocking ?(set_flags=true) ch blocking =
 
 external unix_stub_readable : Unix.file_descr -> bool = "lwt_unix_readable"
 external unix_stub_writable : Unix.file_descr -> bool = "lwt_unix_writable"
-external unix_stub_pollpri : Unix.file_descr -> bool = "lwt_unix_pollpri"
+external unix_stub_highprio : Unix.file_descr -> bool = "lwt_unix_highprio"
 
 let rec unix_readable fd =
   try
@@ -382,7 +382,7 @@ let rec unix_readable fd =
 
 let rec unix_pollpri fd =
   try
-    unix_stub_pollpri fd
+    unix_stub_highprio fd
   with Unix.Unix_error (Unix.EINTR, _, _) ->
     unix_pollpri fd
 
@@ -399,7 +399,7 @@ let readable ch =
   check_descriptor ch;
   unix_readable ch.fd
 
-let pollpri ch =
+let highprio ch =
   check_descriptor ch;
   unix_pollpri ch.fd
 
@@ -641,10 +641,10 @@ let read ch buf pos len =
       | false ->
           wrap_syscall Read ch (fun () -> stub_read ch.fd buf pos len)
 
-let wait_pollpri ch =
+let wait_highprio ch =
   Lwt.catch
     (fun () ->
-       if pollpri ch then
+       if highprio ch then
          Lwt.return_unit
     else
       register_action Read ch ignore)

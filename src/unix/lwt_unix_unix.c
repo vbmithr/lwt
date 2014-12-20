@@ -48,14 +48,14 @@ CAMLprim value lwt_unix_readable(value fd)
   return (Val_bool(pollfd.revents & POLLIN));
 }
 
-CAMLprim value lwt_unix_pollpri(value fd)
+CAMLprim value lwt_unix_highprio(value fd)
 {
   struct pollfd pollfd;
   pollfd.fd = Int_val(fd);
-  pollfd.events = POLLPRI;
+  pollfd.events = POLLPRI | POLLERR;
   pollfd.revents = 0;
   if (poll(&pollfd, 1, 0) < 0)
-    uerror("pollpri", Nothing);
+    uerror("highprio", Nothing);
   return (Val_bool(pollfd.revents & POLLPRI));
 }
 
