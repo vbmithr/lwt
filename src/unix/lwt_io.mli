@@ -402,6 +402,7 @@ type server
 val establish_server :
   ?iface : string -> ?flowinfo : int ->
   ?fd : Lwt_unix.file_descr ->
+  ?setup_client_socket : (Lwt_unix.file_descr -> unit) ->
   ?buffer_size : int ->
   ?backlog : int ->
   Unix.sockaddr -> (input_channel * output_channel -> unit) -> server

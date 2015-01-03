@@ -1387,7 +1387,9 @@ type server = {
 
 let shutdown_server server = Lazy.force server.shutdown
 
-let establish_server ?iface ?flowinfo ?fd ?buffer_size ?(backlog=5) sockaddr f =
+let establish_server
+    ?iface ?flowinfo ?fd ?(setup_client_socket=fun _ -> ())
+    ?buffer_size ?(backlog=5) sockaddr f =
   let sock = match fd with
     | None -> Lwt_unix.socket (Unix.domain_of_sockaddr sockaddr) Unix.SOCK_STREAM 0
     | Some fd -> fd
@@ -1399,23 +1401,24 @@ let establish_server ?iface ?flowinfo ?fd ?buffer_size ?(backlog=5) sockaddr f =
   let abort_waiter = abort_waiter >>= fun _ -> Lwt.return `Shutdown in
   let rec loop () =
     Lwt.pick [Lwt_unix.accept sock >|= (fun x -> `Accept x); abort_waiter] >>= function
-      | `Accept(fd, addr) ->
-          (try Lwt_unix.set_close_on_exec fd with Invalid_argument _ -> ());
-          let close = lazy begin
-            Lwt_unix.shutdown fd Unix.SHUTDOWN_ALL;
-            Lwt_unix.close fd
-          end in
-          f (of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd,
-             of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd);
-          loop ()
+    | `Accept(fd, addr) ->
+      (try Lwt_unix.set_close_on_exec fd with Invalid_argument _ -> ());
+      (try setup_client_socket fd with _ -> ());
+        let close = lazy begin
+          Lwt_unix.shutdown fd Unix.SHUTDOWN_ALL;
+          Lwt_unix.close fd
+        end in
+        f (of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd,
+           of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd);
+        loop ()
       | `Shutdown ->
-          Lwt_unix.close sock >>= fun () ->
-          match sockaddr with
-            | Unix.ADDR_UNIX path when path <> "" && path.[0] <> '\x00' ->
-                Unix.unlink path;
-                Lwt.return_unit
-            | _ ->
-                Lwt.return_unit
+        Lwt_unix.close sock >>= fun () ->
+        match sockaddr with
+        | Unix.ADDR_UNIX path when path <> "" && path.[0] <> '\x00' ->
+          Unix.unlink path;
+          Lwt.return_unit
+        | _ ->
+          Lwt.return_unit
   in
   ignore (loop ());
   { shutdown = lazy(Lwt.wakeup abort_wakener `Shutdown) }
