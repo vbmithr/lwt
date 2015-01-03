@@ -138,7 +138,7 @@ Library "lwt-unix"
   InternalModules:
     Lwt_unix_jobs_generated,
     Lwt_config
-  BuildDepends: lwt, lwt.log, unix, bigarray
+  BuildDepends: lwt, lwt.log, unix, bigarray, sockopt
   XMETADescription: Unix support for lwt
   CSources:
     lwt_config.h,

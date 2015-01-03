@@ -375,6 +375,7 @@ val with_file :
       channel is closed when [f ch] terminates (even if it fails). *)
 
 val open_connection :
+  ?iface : string -> ?flowinfo : int ->
   ?fd : Lwt_unix.file_descr ->
   ?buffer_size : int -> Unix.sockaddr -> (input_channel * output_channel) Lwt.t
 (** [open_connection ?fd ?buffer_size addr] opens a connection to the
@@ -388,6 +389,7 @@ val open_connection :
 *)
 
 val with_connection :
+  ?iface : string -> ?flowinfo : int ->
   ?fd : Lwt_unix.file_descr ->
   ?buffer_size : int ->
   Unix.sockaddr -> (input_channel * output_channel -> 'a Lwt.t) -> 'a Lwt.t
@@ -398,6 +400,7 @@ type server
   (** Type of a server *)
 
 val establish_server :
+  ?iface : string -> ?flowinfo : int ->
   ?fd : Lwt_unix.file_descr ->
   ?buffer_size : int ->
   ?backlog : int ->

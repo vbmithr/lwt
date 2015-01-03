@@ -678,7 +678,7 @@ val socket : socket_domain -> socket_type -> int -> file_descr
 val socketpair : socket_domain -> socket_type -> int -> file_descr * file_descr
   (** Wrapper for [Unix.socketpair] *)
 
-val bind : file_descr -> sockaddr -> unit
+val bind : ?iface:string -> ?flowinfo:int -> file_descr -> sockaddr -> unit
   (** Wrapper for [Unix.bind] *)
 
 val listen : file_descr -> int -> unit
@@ -707,8 +707,8 @@ val accept_n : file_descr -> int -> ((file_descr * sockaddr) list * exn option) 
 
       {{:http://portal.acm.org/citation.cfm?id=1247435}Acceptable strategies for improving web server performance} *)
 
-val connect : file_descr -> sockaddr -> unit Lwt.t
-  (** Wrapper for [Unix.connect] *)
+val connect : ?iface:string -> ?flowinfo:int -> file_descr -> sockaddr -> unit Lwt.t
+  (** Wrapper for [Sockopt.U.connect] *)
 
 type shutdown_command =
     Unix.shutdown_command =

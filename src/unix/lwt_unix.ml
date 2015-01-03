@@ -1358,7 +1358,7 @@ let accept_n ch n =
       end)
     (fun exn -> Lwt.return (List.rev !l, Some exn))
 
-let connect ch addr =
+let connect ?iface ?flowinfo ch addr =
   if Sys.win32 then
     (* [in_progress] tell wether connection has started but not
        terminated: *)
@@ -1368,7 +1368,7 @@ let connect ch addr =
         (* Nothing works without this test and i have no idea why... *)
         if writable ch then
           try
-            Unix.connect ch.fd addr
+            Sockopt.U.connect ?iface ?flowinfo ch.fd addr
           with
             | Unix.Unix_error (Unix.EISCONN, _, _) ->
                 (* This is the windows way of telling that the connection
@@ -1378,7 +1378,7 @@ let connect ch addr =
           raise Retry
       else
         try
-          Unix.connect ch.fd addr
+          Sockopt.U.connect ?iface ?flowinfo ch.fd addr
         with
           | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) ->
               in_progress := true;
@@ -1403,7 +1403,7 @@ let connect ch addr =
         try
           (* We should pass only one time here, unless the system call
              is interrupted by a signal: *)
-          Unix.connect ch.fd addr
+          Sockopt.U.connect ?iface ?flowinfo ch.fd addr
         with
           | Unix.Unix_error (Unix.EINPROGRESS, _, _) ->
               in_progress := true;
@@ -1414,9 +1414,9 @@ let setsockopt ch opt v =
   check_descriptor ch;
   Unix.setsockopt ch.fd opt v
 
-let bind ch addr =
+let bind ?iface ?flowinfo ch addr =
   check_descriptor ch;
-  Unix.bind ch.fd addr
+  Sockopt.U.bind ?iface ?flowinfo ch.fd addr
 
 let listen ch cnt =
   check_descriptor ch;
