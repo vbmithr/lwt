@@ -1408,8 +1408,8 @@ let establish_server
           Lwt_unix.shutdown fd Unix.SHUTDOWN_ALL;
           Lwt_unix.close fd
         end in
-        f (of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd,
-           of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd);
+        f ((of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd,
+           of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd), addr);
         loop ()
       | `Shutdown ->
         Lwt_unix.close sock >>= fun () ->
