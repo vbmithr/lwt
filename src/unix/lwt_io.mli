@@ -405,7 +405,7 @@ val establish_server :
   ?setup_client_socket : (Lwt_unix.file_descr -> unit) ->
   ?buffer_size : int ->
   ?backlog : int ->
-  Unix.sockaddr -> ((input_channel * output_channel) * Unix.sockaddr -> unit) -> server
+  Unix.sockaddr -> (input_channel -> output_channel -> Unix.sockaddr -> unit) -> server
 (** [establish_server ?fd ?buffer_size ?backlog sockaddr f] creates a
     server which will listen for incoming connections. New connections
     are passed to [f]. Note that [f] must not raise any exception. If

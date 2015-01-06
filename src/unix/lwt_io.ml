@@ -1404,21 +1404,21 @@ let establish_server
     | `Accept(fd, addr) ->
       (try Lwt_unix.set_close_on_exec fd with Invalid_argument _ -> ());
       (try setup_client_socket fd with _ -> ());
-        let close = lazy begin
-          Lwt_unix.shutdown fd Unix.SHUTDOWN_ALL;
-          Lwt_unix.close fd
-        end in
-        f ((of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd,
-           of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd), addr);
-        loop ()
-      | `Shutdown ->
-        Lwt_unix.close sock >>= fun () ->
-        match sockaddr with
-        | Unix.ADDR_UNIX path when path <> "" && path.[0] <> '\x00' ->
-          Unix.unlink path;
-          Lwt.return_unit
-        | _ ->
-          Lwt.return_unit
+      let close = lazy begin
+        Lwt_unix.shutdown fd Unix.SHUTDOWN_ALL;
+        Lwt_unix.close fd
+      end in
+      f (of_fd ?buffer_size ~mode:input ~close:(fun () -> Lazy.force close) fd)
+        (of_fd ?buffer_size ~mode:output ~close:(fun () -> Lazy.force close) fd) addr;
+      loop ()
+    | `Shutdown ->
+      Lwt_unix.close sock >>= fun () ->
+      match sockaddr with
+      | Unix.ADDR_UNIX path when path <> "" && path.[0] <> '\x00' ->
+        Unix.unlink path;
+        Lwt.return_unit
+      | _ ->
+        Lwt.return_unit
   in
   ignore (loop ());
   { shutdown = lazy(Lwt.wakeup abort_wakener `Shutdown) }

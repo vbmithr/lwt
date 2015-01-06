@@ -1410,10 +1410,6 @@ let connect ?iface ?flowinfo ch addr =
               raise Retry
     end
 
-let setsockopt ch opt v =
-  check_descriptor ch;
-  Unix.setsockopt ch.fd opt v
-
 let bind ?iface ?flowinfo ch addr =
   check_descriptor ch;
   Sockopt.U.bind ?iface ?flowinfo ch.fd addr
@@ -1509,6 +1505,54 @@ let setsockopt_float ch opt x =
 let getsockopt_error ch =
   check_descriptor ch;
   Unix.getsockopt_error ch.fd
+
+
+let open_connection ?iface ?flowinfo fd sockaddr =
+  Lwt.catch
+    (fun () ->
+       connect ?iface ?flowinfo fd sockaddr >>= fun () ->
+       (try set_close_on_exec fd with Invalid_argument _ -> ());
+       Lwt.return fd)
+    (fun exn ->
+       Lwt.catch (fun () -> close fd) (fun _ -> Lwt.return_unit) >>= fun () ->
+       Lwt.fail exn)
+
+let with_connection ?iface ?flowinfo fd sockaddr f =
+  open_connection ?iface ?flowinfo fd sockaddr >>= fun fd ->
+  Lwt.finalize (fun () -> f fd) (fun () -> close fd)
+
+type server = {
+  shutdown : unit Lazy.t;
+}
+
+let shutdown_server server = Lazy.force server.shutdown
+
+let establish_server
+    ?iface ?flowinfo ?(setup_client_socket=fun _ -> ())
+    ?(backlog=5) sock sockaddr f =
+  setsockopt sock Unix.SO_REUSEADDR true;
+  bind ?iface ?flowinfo sock sockaddr;
+  listen sock backlog;
+  let abort_waiter, abort_wakener = Lwt.wait () in
+  let abort_waiter = abort_waiter >>= fun _ -> Lwt.return `Shutdown in
+  let rec loop () =
+    Lwt.pick [accept sock >|= (fun x -> `Accept x); abort_waiter] >>= function
+    | `Accept(fd, addr) ->
+      (try set_close_on_exec fd with Invalid_argument _ -> ());
+      (try setup_client_socket fd with _ -> ());
+      f sock addr;
+      loop ()
+    | `Shutdown ->
+      close sock >>= fun () ->
+      match sockaddr with
+      | Unix.ADDR_UNIX path when path <> "" && path.[0] <> '\x00' ->
+        Unix.unlink path;
+        Lwt.return_unit
+      | _ ->
+        Lwt.return_unit
+  in
+  ignore (loop ());
+  { shutdown = lazy(Lwt.wakeup abort_wakener `Shutdown) }
 
 (* +-----------------------------------------------------------------+
    | Host and protocol databases                                     |

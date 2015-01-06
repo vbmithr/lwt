@@ -844,6 +844,19 @@ val setsockopt_float : file_descr -> socket_float_option -> float -> unit
 val getsockopt_error : file_descr -> Unix.error option
   (** Wrapper for [Unix.getsockopt_error] *)
 
+(** {2 Higher level client/server utilities} *)
+
+val open_connection : ?iface:string -> ?flowinfo:int -> file_descr ->
+  sockaddr -> file_descr Lwt.t
+val with_connection : ?iface:string -> ?flowinfo:int -> file_descr ->
+  sockaddr -> (file_descr -> unit Lwt.t) -> unit Lwt.t
+
+type server
+val shutdown_server : server -> unit
+val establish_server : ?iface:string -> ?flowinfo:int ->
+  ?setup_client_socket:(file_descr -> unit) -> ?backlog:int ->
+  file_descr -> sockaddr -> (file_descr -> sockaddr -> unit) -> server
+
 (** {2 Host and protocol databases} *)
 
 type host_entry =
